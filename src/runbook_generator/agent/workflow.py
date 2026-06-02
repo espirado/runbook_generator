@@ -16,6 +16,7 @@ from runbook_generator.agent.observability import (
 )
 from runbook_generator.exporters.confluence import ConfluenceExporter, ConfluenceTarget
 from runbook_generator.exporters.jira import JiraExporter, JiraTarget
+from runbook_generator.exporters.slack import SlackNotifier, SlackTarget
 from runbook_generator.exporters.wiki import WikiExporter, WikiTarget
 from runbook_generator.models import EnvironmentSnapshot
 
@@ -37,6 +38,7 @@ class AgentOpsWorkflow:
         observability_config: ObservabilityConfig,
         confluence_target: ConfluenceTarget,
         jira_target: JiraTarget,
+        slack_target: SlackTarget,
         wiki_target: WikiTarget,
         runbook_path: str | None = None,
         snapshot_path: str | None = None,
@@ -85,6 +87,17 @@ class AgentOpsWorkflow:
                 sort_keys=True,
             )
             + "\n",
+        )
+        slack_notifier = SlackNotifier(slack_target)
+        slack_payload = slack_notifier.render_payload(report)
+        artifacts["slack_payload"] = self._write(
+            output_dir / "slack_message.json",
+            json.dumps(slack_payload, indent=2, sort_keys=True) + "\n",
+        )
+        slack_result = slack_notifier.send(slack_payload)
+        artifacts["slack_send_result"] = self._write(
+            output_dir / "slack_send_result.json",
+            json.dumps(slack_result, indent=2, sort_keys=True) + "\n",
         )
         artifacts["wiki_page"] = self._write(
             output_dir / "wiki_page.md",
@@ -274,10 +287,10 @@ class AgentOpsWorkflow:
             AgentInstruction(
                 title="Prepare incident communications",
                 objective=(
-                    "Use the incident report and Jira payload to draft operator-facing "
-                    "updates and next actions."
+                    "Use the incident report, Jira payload, and Slack payload to draft "
+                    "operator-facing updates and next actions."
                 ),
-                inputs=["incident_report.md", "jira_issue.json"],
+                inputs=["incident_report.md", "jira_issue.json", "slack_message.json"],
                 expected_output="A ready-to-review incident update and ticket description.",
                 safety_notes=[
                     "Do not claim customer impact unless supported by observability data.",

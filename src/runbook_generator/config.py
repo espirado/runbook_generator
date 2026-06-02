@@ -28,11 +28,16 @@ ENV_JIRA_BASE_URL = "RUNBOOK_JIRA_BASE_URL"
 ENV_JIRA_PROJECT_KEY = "RUNBOOK_JIRA_PROJECT_KEY"
 ENV_JIRA_ISSUE_TYPE = "RUNBOOK_JIRA_ISSUE_TYPE"
 ENV_WIKI_BASE_URL = "RUNBOOK_WIKI_BASE_URL"
+ENV_SLACK_WEBHOOK_URL = "RUNBOOK_SLACK_WEBHOOK_URL"
+ENV_SLACK_CHANNEL = "RUNBOOK_SLACK_CHANNEL"
+ENV_SLACK_USERNAME = "RUNBOOK_SLACK_USERNAME"
+ENV_SLACK_SEND = "RUNBOOK_SLACK_SEND"
 
 DEFAULT_SOURCE = "fixture"
 DEFAULT_ENVIRONMENT = "unknown"
 DEFAULT_AGENT_OUTPUT_DIR = "ops-package"
 DEFAULT_JIRA_ISSUE_TYPE = "Incident"
+DEFAULT_SLACK_USERNAME = "runbook-generator"
 SUPPORTED_SOURCES = ("fixture", "aws", "eks", "kubernetes")
 
 DEFAULT_FIXTURE_ACCOUNT = "000000000000"
@@ -71,6 +76,10 @@ class RuntimeConfig:
     jira_project_key: str | None
     jira_issue_type: str
     wiki_base_url: str | None
+    slack_webhook_url: str | None
+    slack_channel: str | None
+    slack_username: str
+    slack_send: bool
 
 
 def load_runtime_config() -> RuntimeConfig:
@@ -106,4 +115,12 @@ def load_runtime_config() -> RuntimeConfig:
         jira_project_key=os.environ.get(ENV_JIRA_PROJECT_KEY),
         jira_issue_type=os.environ.get(ENV_JIRA_ISSUE_TYPE, DEFAULT_JIRA_ISSUE_TYPE),
         wiki_base_url=os.environ.get(ENV_WIKI_BASE_URL),
+        slack_webhook_url=os.environ.get(ENV_SLACK_WEBHOOK_URL),
+        slack_channel=os.environ.get(ENV_SLACK_CHANNEL),
+        slack_username=os.environ.get(ENV_SLACK_USERNAME, DEFAULT_SLACK_USERNAME),
+        slack_send=_env_bool(ENV_SLACK_SEND),
     )
+
+
+def _env_bool(name: str) -> bool:
+    return os.environ.get(name, "").lower() in {"1", "true", "yes", "on"}

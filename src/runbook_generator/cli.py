@@ -16,6 +16,7 @@ from runbook_generator.collectors.kubernetes import KubectlCollector
 from runbook_generator.config import SUPPORTED_SOURCES, load_runtime_config
 from runbook_generator.exporters.confluence import ConfluenceTarget
 from runbook_generator.exporters.jira import JiraTarget
+from runbook_generator.exporters.slack import SlackTarget
 from runbook_generator.exporters.wiki import WikiTarget
 from runbook_generator.orchestrator import RunbookGenerator
 
@@ -156,6 +157,27 @@ def build_parser() -> argparse.ArgumentParser:
         default=config.wiki_base_url,
         help="Generic wiki base URL for generated wiki page metadata.",
     )
+    ops_package.add_argument(
+        "--slack-webhook-url",
+        default=config.slack_webhook_url,
+        help="Slack incoming webhook URL. Required only when sending.",
+    )
+    ops_package.add_argument(
+        "--slack-channel",
+        default=config.slack_channel,
+        help="Slack channel override for generated notifications.",
+    )
+    ops_package.add_argument(
+        "--slack-username",
+        default=config.slack_username,
+        help="Slack bot username for generated notifications.",
+    )
+    ops_package.add_argument(
+        "--send-slack",
+        action="store_true",
+        default=config.slack_send,
+        help="Send the Slack notification via webhook instead of dry-run only.",
+    )
 
     return parser
 
@@ -209,6 +231,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 base_url=args.jira_base_url,
                 project_key=args.jira_project_key,
                 issue_type=args.jira_issue_type,
+            ),
+            slack_target=SlackTarget(
+                webhook_url=args.slack_webhook_url,
+                channel=args.slack_channel,
+                username=args.slack_username,
+                send=args.send_slack,
             ),
             wiki_target=WikiTarget(base_url=args.wiki_base_url),
         )

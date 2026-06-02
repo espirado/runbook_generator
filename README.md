@@ -25,7 +25,7 @@ runbook.md + optional snapshot.json
         ↓
 Agent/reporting package
   agent_context.json, incident_report.md, jira_issue.json,
-  confluence_page.json, wiki_page.md
+  confluence_page.json, slack_message.json, wiki_page.md
 ```
 
 The core model is platform-neutral:
@@ -73,6 +73,10 @@ export RUNBOOK_JIRA_BASE_URL=https://replace-me-jira.example.invalid
 export RUNBOOK_JIRA_PROJECT_KEY=replace-me-project-key
 export RUNBOOK_JIRA_ISSUE_TYPE=Incident
 export RUNBOOK_WIKI_BASE_URL=https://replace-me-wiki.example.invalid
+export RUNBOOK_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/replace-me
+export RUNBOOK_SLACK_CHANNEL=#replace-me-channel
+export RUNBOOK_SLACK_USERNAME=runbook-generator
+export RUNBOOK_SLACK_SEND=false
 ```
 
 Then generate from the configured target:
@@ -141,11 +145,15 @@ The package is written to `RUNBOOK_AGENT_OUTPUT_DIR` and contains:
 - `agent_context.json` - structured task context for Cursor agents or other agents
 - `jira_issue.json` - dry-run Jira create-issue payload
 - `confluence_page.json` - dry-run Confluence create-page payload
+- `slack_message.json` - Slack notification payload
+- `slack_send_result.json` - Slack send status; dry-run unless explicitly enabled
 - `wiki_page.md` - generic Markdown wiki page
 
 The generated payloads are intentionally dry-run artifacts. They are ready for
 review, publishing automation, or a Cursor agent, but the prototype does not
-create Jira issues or Confluence pages as a side effect.
+create Jira issues, Confluence pages, or Slack notifications as a side effect.
+Set `RUNBOOK_SLACK_SEND=true` or pass `--send-slack` only when you want the
+Slack webhook to be called.
 
 ### Cursor-agent workflow
 
@@ -185,7 +193,7 @@ Implemented:
 - AWS CLI collector skeleton for EC2, Lambda, RDS, ELBv2, CloudWatch, and EKS
 - kubectl collector skeleton for EKS workloads and routing
 - Agent/reporting package for Cursor-agent handoff, incident drafts, Jira,
-  Confluence, and wiki artifacts
+  Confluence, Slack, and wiki artifacts
 - Offline fixture collector
 - Deterministic Markdown renderer
 - LLM prompt contract for future synthesis
