@@ -16,9 +16,23 @@ ENV_SERVICE = "RUNBOOK_SERVICE"
 ENV_KUBE_CONTEXT = "RUNBOOK_KUBE_CONTEXT"
 ENV_OUTPUT = "RUNBOOK_OUTPUT"
 ENV_SNAPSHOT_OUTPUT = "RUNBOOK_SNAPSHOT_OUTPUT"
+ENV_AGENT_OUTPUT_DIR = "RUNBOOK_AGENT_OUTPUT_DIR"
+ENV_OBSERVABILITY_PROVIDER = "RUNBOOK_OBSERVABILITY_PROVIDER"
+ENV_OBSERVABILITY_BASE_URL = "RUNBOOK_OBSERVABILITY_BASE_URL"
+ENV_OBSERVABILITY_QUERY = "RUNBOOK_OBSERVABILITY_QUERY"
+ENV_OBSERVABILITY_DASHBOARD_URL = "RUNBOOK_OBSERVABILITY_DASHBOARD_URL"
+ENV_CONFLUENCE_BASE_URL = "RUNBOOK_CONFLUENCE_BASE_URL"
+ENV_CONFLUENCE_SPACE_KEY = "RUNBOOK_CONFLUENCE_SPACE_KEY"
+ENV_CONFLUENCE_PARENT_PAGE_ID = "RUNBOOK_CONFLUENCE_PARENT_PAGE_ID"
+ENV_JIRA_BASE_URL = "RUNBOOK_JIRA_BASE_URL"
+ENV_JIRA_PROJECT_KEY = "RUNBOOK_JIRA_PROJECT_KEY"
+ENV_JIRA_ISSUE_TYPE = "RUNBOOK_JIRA_ISSUE_TYPE"
+ENV_WIKI_BASE_URL = "RUNBOOK_WIKI_BASE_URL"
 
 DEFAULT_SOURCE = "fixture"
 DEFAULT_ENVIRONMENT = "unknown"
+DEFAULT_AGENT_OUTPUT_DIR = "ops-package"
+DEFAULT_JIRA_ISSUE_TYPE = "Incident"
 SUPPORTED_SOURCES = ("fixture", "aws", "eks", "kubernetes")
 
 DEFAULT_FIXTURE_ACCOUNT = "000000000000"
@@ -45,6 +59,18 @@ class RuntimeConfig:
     kube_context: str | None
     output: str | None
     snapshot_output: str | None
+    agent_output_dir: str
+    observability_provider: str | None
+    observability_base_url: str | None
+    observability_query: str | None
+    observability_dashboard_url: str | None
+    confluence_base_url: str | None
+    confluence_space_key: str | None
+    confluence_parent_page_id: str | None
+    jira_base_url: str | None
+    jira_project_key: str | None
+    jira_issue_type: str
+    wiki_base_url: str | None
 
 
 def load_runtime_config() -> RuntimeConfig:
@@ -65,4 +91,19 @@ def load_runtime_config() -> RuntimeConfig:
         kube_context=os.environ.get(ENV_KUBE_CONTEXT),
         output=os.environ.get(ENV_OUTPUT),
         snapshot_output=os.environ.get(ENV_SNAPSHOT_OUTPUT),
+        agent_output_dir=os.environ.get(
+            ENV_AGENT_OUTPUT_DIR,
+            DEFAULT_AGENT_OUTPUT_DIR,
+        ),
+        observability_provider=os.environ.get(ENV_OBSERVABILITY_PROVIDER),
+        observability_base_url=os.environ.get(ENV_OBSERVABILITY_BASE_URL),
+        observability_query=os.environ.get(ENV_OBSERVABILITY_QUERY),
+        observability_dashboard_url=os.environ.get(ENV_OBSERVABILITY_DASHBOARD_URL),
+        confluence_base_url=os.environ.get(ENV_CONFLUENCE_BASE_URL),
+        confluence_space_key=os.environ.get(ENV_CONFLUENCE_SPACE_KEY),
+        confluence_parent_page_id=os.environ.get(ENV_CONFLUENCE_PARENT_PAGE_ID),
+        jira_base_url=os.environ.get(ENV_JIRA_BASE_URL),
+        jira_project_key=os.environ.get(ENV_JIRA_PROJECT_KEY),
+        jira_issue_type=os.environ.get(ENV_JIRA_ISSUE_TYPE, DEFAULT_JIRA_ISSUE_TYPE),
+        wiki_base_url=os.environ.get(ENV_WIKI_BASE_URL),
     )

@@ -22,6 +22,10 @@ Normalized EnvironmentSnapshot
 Markdown Runbook Renderer
         ↓
 runbook.md + optional snapshot.json
+        ↓
+Agent/reporting package
+  agent_context.json, incident_report.md, jira_issue.json,
+  confluence_page.json, wiki_page.md
 ```
 
 The core model is platform-neutral:
@@ -57,6 +61,18 @@ export RUNBOOK_SERVICE=replace-me-service-or-workload-name
 export RUNBOOK_KUBE_CONTEXT=replace-me-kubectl-context
 export RUNBOOK_OUTPUT=runbooks/replace-me-service-or-workload-name.md
 export RUNBOOK_SNAPSHOT_OUTPUT=runbooks/replace-me-service-or-workload-name.snapshot.json
+export RUNBOOK_AGENT_OUTPUT_DIR=ops-package/replace-me-service-or-workload-name
+export RUNBOOK_OBSERVABILITY_PROVIDER=replace-me-observability-provider
+export RUNBOOK_OBSERVABILITY_BASE_URL=https://replace-me-observability.example.invalid
+export RUNBOOK_OBSERVABILITY_QUERY=replace-me-query
+export RUNBOOK_OBSERVABILITY_DASHBOARD_URL=https://replace-me-dashboard.example.invalid
+export RUNBOOK_CONFLUENCE_BASE_URL=https://replace-me-confluence.example.invalid
+export RUNBOOK_CONFLUENCE_SPACE_KEY=replace-me-space-key
+export RUNBOOK_CONFLUENCE_PARENT_PAGE_ID=replace-me-parent-page-id
+export RUNBOOK_JIRA_BASE_URL=https://replace-me-jira.example.invalid
+export RUNBOOK_JIRA_PROJECT_KEY=replace-me-project-key
+export RUNBOOK_JIRA_ISSUE_TYPE=Incident
+export RUNBOOK_WIKI_BASE_URL=https://replace-me-wiki.example.invalid
 ```
 
 Then generate from the configured target:
@@ -108,6 +124,43 @@ set -a; . ./.env; set +a
 PYTHONPATH=src python3 -m runbook_generator.cli generate
 ```
 
+## Agent, incident, and documentation package
+
+Generate a full operations package from the same live AWS/EKS target:
+
+```bash
+PYTHONPATH=src python3 -m runbook_generator.cli ops-package
+```
+
+The package is written to `RUNBOOK_AGENT_OUTPUT_DIR` and contains:
+
+- `runbook.md` - human-readable operational runbook
+- `snapshot.json` - normalized live environment inventory
+- `observability_signals.json` - monitoring context from the configured platform
+- `incident_report.md` - incident-management/reporting draft
+- `agent_context.json` - structured task context for Cursor agents or other agents
+- `jira_issue.json` - dry-run Jira create-issue payload
+- `confluence_page.json` - dry-run Confluence create-page payload
+- `wiki_page.md` - generic Markdown wiki page
+
+The generated payloads are intentionally dry-run artifacts. They are ready for
+review, publishing automation, or a Cursor agent, but the prototype does not
+create Jira issues or Confluence pages as a side effect.
+
+### Cursor-agent workflow
+
+Use `agent_context.json` as the handoff contract for Cursor agents:
+
+1. Load `agent_context.json`.
+2. Read the referenced `snapshot.json`, `runbook.md`, and
+   `observability_signals.json`.
+3. Follow the `instructions` array to triage, draft incident updates, or prepare
+   documentation changes.
+4. Require human approval before destructive remediation or external publishing.
+
+This keeps the same generated knowledge useful for both humans and autonomous
+agents.
+
 ## Development
 
 Run tests:
@@ -131,6 +184,8 @@ Implemented:
 - Platform-neutral snapshot model
 - AWS CLI collector skeleton for EC2, Lambda, RDS, ELBv2, CloudWatch, and EKS
 - kubectl collector skeleton for EKS workloads and routing
+- Agent/reporting package for Cursor-agent handoff, incident drafts, Jira,
+  Confluence, and wiki artifacts
 - Offline fixture collector
 - Deterministic Markdown renderer
 - LLM prompt contract for future synthesis
@@ -140,4 +195,7 @@ Next:
 - Add richer dependency inference from tags, labels, security groups, target
   groups, service selectors, and environment variables.
 - Add MCP collectors when Kubernetes/AWS MCP tools are configured.
+- Add publisher implementations that post approved Jira/Confluence/wiki payloads.
+- Add richer observability adapters for Datadog, Grafana, PagerDuty, and
+  Prometheus alert APIs.
 - Add LLM-backed synthesis using the normalized snapshot as structured input.

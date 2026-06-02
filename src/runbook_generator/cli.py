@@ -7,11 +7,16 @@ import json
 from pathlib import Path
 from typing import Sequence
 
+from runbook_generator.agent.observability import ObservabilityConfig
+from runbook_generator.agent.workflow import AgentOpsWorkflow
 from runbook_generator.collectors.aws import AwsCliCollector
 from runbook_generator.collectors.base import CollectionTarget, Collector
 from runbook_generator.collectors.fixture import FixtureCollector
 from runbook_generator.collectors.kubernetes import KubectlCollector
 from runbook_generator.config import SUPPORTED_SOURCES, load_runtime_config
+from runbook_generator.exporters.confluence import ConfluenceTarget
+from runbook_generator.exporters.jira import JiraTarget
+from runbook_generator.exporters.wiki import WikiTarget
 from runbook_generator.orchestrator import RunbookGenerator
 
 
@@ -83,6 +88,75 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print the normalized JSON snapshot after the runbook.",
     )
 
+    ops_package = subcommands.add_parser(
+        "ops-package",
+        help=(
+            "Generate a runbook plus agent, incident-management, "
+            "Confluence, Jira, and wiki artifacts."
+        ),
+    )
+    _add_collection_arguments(ops_package, config)
+    ops_package.add_argument(
+        "--output-dir",
+        default=config.agent_output_dir,
+        help="Directory for generated agent/reporting artifacts.",
+    )
+    ops_package.add_argument(
+        "--observability-provider",
+        default=config.observability_provider,
+        help="Monitoring provider name, for example prometheus, grafana, or datadog.",
+    )
+    ops_package.add_argument(
+        "--observability-base-url",
+        default=config.observability_base_url,
+        help="Base URL for the observability platform.",
+    )
+    ops_package.add_argument(
+        "--observability-query",
+        default=config.observability_query,
+        help="Query used to collect or describe monitoring signals.",
+    )
+    ops_package.add_argument(
+        "--observability-dashboard-url",
+        default=config.observability_dashboard_url,
+        help="Dashboard URL to include in generated reports.",
+    )
+    ops_package.add_argument(
+        "--confluence-base-url",
+        default=config.confluence_base_url,
+        help="Confluence base URL for generated page payload metadata.",
+    )
+    ops_package.add_argument(
+        "--confluence-space-key",
+        default=config.confluence_space_key,
+        help="Confluence space key for generated page payload metadata.",
+    )
+    ops_package.add_argument(
+        "--confluence-parent-page-id",
+        default=config.confluence_parent_page_id,
+        help="Optional parent page ID for generated Confluence payloads.",
+    )
+    ops_package.add_argument(
+        "--jira-base-url",
+        default=config.jira_base_url,
+        help="Jira base URL for generated issue payload metadata.",
+    )
+    ops_package.add_argument(
+        "--jira-project-key",
+        default=config.jira_project_key,
+        help="Jira project key for generated issue payload metadata.",
+    )
+    ops_package.add_argument(
+        "--jira-issue-type",
+        default=config.jira_issue_type,
+        help="Jira issue type for generated incident payloads.",
+    )
+    ops_package.add_argument(
+        "--wiki-base-url",
+        default=config.wiki_base_url,
+        help="Generic wiki base URL for generated wiki page metadata.",
+    )
+
     return parser
 
 
@@ -91,15 +165,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "generate":
-        target = CollectionTarget(
-            environment=args.environment,
-            account=args.account,
-            region=args.region,
-            cluster=args.cluster,
-            namespace=args.namespace,
-            service=args.service,
-            kube_context=args.kube_context,
-        )
+        target = _target_from_args(args)
         generator = RunbookGenerator(_collectors_for_source(args.source))
         snapshot, runbook = generator.generate(target)
 
@@ -119,8 +185,95 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(snapshot_json)
         return 0
 
+    if args.command == "ops-package":
+        target = _target_from_args(args)
+        generator = RunbookGenerator(_collectors_for_source(args.source))
+        snapshot, runbook = generator.generate(target)
+        output_dir = Path(args.output_dir)
+        artifacts = AgentOpsWorkflow().create_package(
+            snapshot=snapshot,
+            runbook=runbook,
+            output_dir=output_dir,
+            observability_config=ObservabilityConfig(
+                provider=args.observability_provider,
+                base_url=args.observability_base_url,
+                query=args.observability_query,
+                dashboard_url=args.observability_dashboard_url,
+            ),
+            confluence_target=ConfluenceTarget(
+                base_url=args.confluence_base_url,
+                space_key=args.confluence_space_key,
+                parent_page_id=args.confluence_parent_page_id,
+            ),
+            jira_target=JiraTarget(
+                base_url=args.jira_base_url,
+                project_key=args.jira_project_key,
+                issue_type=args.jira_issue_type,
+            ),
+            wiki_target=WikiTarget(base_url=args.wiki_base_url),
+        )
+        print(json.dumps(artifacts, indent=2, sort_keys=True))
+        return 0
+
     parser.error(f"Unsupported command: {args.command}")
     return 2
+
+
+def _add_collection_arguments(
+    parser: argparse.ArgumentParser,
+    config: object,
+) -> None:
+    parser.add_argument(
+        "--source",
+        choices=SUPPORTED_SOURCES,
+        default=config.source,
+        help=(
+            "Data source. Use 'eks' for AWS EKS control-plane plus kubectl workload discovery."
+        ),
+    )
+    parser.add_argument("--environment", default=config.environment)
+    parser.add_argument(
+        "--account",
+        default=config.account,
+        help="Expected cloud account identifier.",
+    )
+    parser.add_argument(
+        "--region",
+        default=config.region,
+        help="AWS region. Defaults to RUNBOOK_AWS_REGION, AWS_REGION, or AWS_DEFAULT_REGION.",
+    )
+    parser.add_argument(
+        "--cluster",
+        default=config.cluster,
+        help="EKS/Kubernetes cluster name.",
+    )
+    parser.add_argument(
+        "--namespace",
+        default=config.namespace,
+        help="Kubernetes namespace.",
+    )
+    parser.add_argument(
+        "--service",
+        default=config.service,
+        help="Primary service/workload name.",
+    )
+    parser.add_argument(
+        "--kube-context",
+        default=config.kube_context,
+        help="kubectl context to query.",
+    )
+
+
+def _target_from_args(args: argparse.Namespace) -> CollectionTarget:
+    return CollectionTarget(
+        environment=args.environment,
+        account=args.account,
+        region=args.region,
+        cluster=args.cluster,
+        namespace=args.namespace,
+        service=args.service,
+        kube_context=args.kube_context,
+    )
 
 
 def _collectors_for_source(source: str) -> list[Collector]:
