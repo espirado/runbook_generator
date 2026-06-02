@@ -46,7 +46,7 @@ VM fleets, managed databases, queues, and MCP-backed discovery.
 Run the offline fixture path:
 
 ```bash
-PYTHONPATH=src python -m runbook_generator.cli generate \
+PYTHONPATH=src python3 -m runbook_generator.cli generate \
   --source fixture \
   --environment production \
   --cluster payments-prod \
@@ -59,7 +59,7 @@ PYTHONPATH=src python -m runbook_generator.cli generate \
 Print to stdout instead:
 
 ```bash
-PYTHONPATH=src python -m runbook_generator.cli generate --source fixture
+PYTHONPATH=src python3 -m runbook_generator.cli generate --source fixture
 ```
 
 ## AWS/EKS live discovery
@@ -84,7 +84,7 @@ kubectl get deployments --all-namespaces
 Generate a runbook from AWS and EKS:
 
 ```bash
-PYTHONPATH=src python -m runbook_generator.cli generate \
+PYTHONPATH=src python3 -m runbook_generator.cli generate \
   --source eks \
   --environment production \
   --region us-east-1 \
@@ -104,13 +104,13 @@ Kubernetes workloads.
 Run tests:
 
 ```bash
-PYTHONPATH=src python -m unittest discover -s tests
+PYTHONPATH=src python3 -m unittest discover -s tests
 ```
 
 Install the CLI locally:
 
 ```bash
-python -m pip install -e .
+python3 -m pip install -e .
 runbook-generator generate --source fixture
 ```
 
