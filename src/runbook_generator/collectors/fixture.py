@@ -3,6 +3,16 @@
 from __future__ import annotations
 
 from runbook_generator.collectors.base import CollectionTarget
+from runbook_generator.config import (
+    DEFAULT_FIXTURE_ACCOUNT,
+    DEFAULT_FIXTURE_ALARM,
+    DEFAULT_FIXTURE_CLUSTER,
+    DEFAULT_FIXTURE_DATABASE,
+    DEFAULT_FIXTURE_IMAGE,
+    DEFAULT_FIXTURE_NAMESPACE,
+    DEFAULT_FIXTURE_REGION,
+    DEFAULT_FIXTURE_SERVICE,
+)
 from runbook_generator.models import (
     EnvironmentSnapshot,
     OperationalCheck,
@@ -17,11 +27,13 @@ class FixtureCollector:
     name = "fixture"
 
     def collect(self, target: CollectionTarget) -> EnvironmentSnapshot:
-        environment = target.environment or "demo"
-        region = target.region or "us-east-1"
-        cluster_name = target.cluster or "payments-prod"
-        namespace = target.namespace or "payments"
-        service_name = target.service or "checkout-api"
+        environment = target.environment
+        region = target.region or DEFAULT_FIXTURE_REGION
+        cluster_name = target.cluster or DEFAULT_FIXTURE_CLUSTER
+        namespace = target.namespace or DEFAULT_FIXTURE_NAMESPACE
+        service_name = target.service or DEFAULT_FIXTURE_SERVICE
+        database_name = f"{service_name}-{DEFAULT_FIXTURE_DATABASE}"
+        alarm_name = f"{service_name}-{DEFAULT_FIXTURE_ALARM}"
 
         eks_cluster = Resource(
             id=f"aws:eks:{region}:{cluster_name}",
@@ -49,7 +61,7 @@ class FixtureCollector:
                 "namespace": namespace,
                 "replicas": 3,
                 "ready_replicas": 3,
-                "image": "example.com/payments/checkout-api:2026.06.02",
+                "image": DEFAULT_FIXTURE_IMAGE,
             },
         )
         service = Resource(
@@ -67,8 +79,8 @@ class FixtureCollector:
             },
         )
         database = Resource(
-            id=f"aws:rds:{region}:checkout-postgres",
-            name="checkout-postgres",
+            id=f"aws:rds:{region}:{database_name}",
+            name=database_name,
             kind="data.database",
             provider="aws.rds",
             environment=environment,
@@ -77,8 +89,8 @@ class FixtureCollector:
             attributes={"engine": "postgres", "multi_az": True},
         )
         alarm = Resource(
-            id=f"aws:cloudwatch:{region}:checkout-api-5xx",
-            name="checkout-api-5xx",
+            id=f"aws:cloudwatch:{region}:{alarm_name}",
+            name=alarm_name,
             kind="observability.alert",
             provider="aws.cloudwatch",
             environment=environment,
@@ -90,7 +102,7 @@ class FixtureCollector:
         return EnvironmentSnapshot(
             name=environment,
             providers=["aws", "aws.eks", "kubernetes"],
-            account=target.account or "000000000000",
+            account=target.account or DEFAULT_FIXTURE_ACCOUNT,
             region=region,
             resources=[eks_cluster, workload, service, database, alarm],
             relationships=[

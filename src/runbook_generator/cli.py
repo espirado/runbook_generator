@@ -11,10 +11,12 @@ from runbook_generator.collectors.aws import AwsCliCollector
 from runbook_generator.collectors.base import CollectionTarget, Collector
 from runbook_generator.collectors.fixture import FixtureCollector
 from runbook_generator.collectors.kubernetes import KubectlCollector
+from runbook_generator.config import SUPPORTED_SOURCES, load_runtime_config
 from runbook_generator.orchestrator import RunbookGenerator
 
 
 def build_parser() -> argparse.ArgumentParser:
+    config = load_runtime_config()
     parser = argparse.ArgumentParser(
         prog="runbook-generator",
         description="Generate operational runbooks from AWS, EKS, Kubernetes, or fixture snapshots.",
@@ -27,26 +29,52 @@ def build_parser() -> argparse.ArgumentParser:
     )
     generate.add_argument(
         "--source",
-        choices=["fixture", "aws", "eks", "kubernetes"],
-        default="fixture",
+        choices=SUPPORTED_SOURCES,
+        default=config.source,
         help=(
             "Data source. Use 'eks' for AWS EKS control-plane plus kubectl workload discovery."
         ),
     )
-    generate.add_argument("--environment", default="production")
-    generate.add_argument("--account", help="Expected cloud account identifier.")
-    generate.add_argument("--region", help="AWS region, for example us-east-1.")
-    generate.add_argument("--cluster", help="EKS/Kubernetes cluster name.")
-    generate.add_argument("--namespace", help="Kubernetes namespace.")
-    generate.add_argument("--service", help="Primary service/workload name.")
-    generate.add_argument("--kube-context", help="kubectl context to query.")
+    generate.add_argument("--environment", default=config.environment)
+    generate.add_argument(
+        "--account",
+        default=config.account,
+        help="Expected cloud account identifier.",
+    )
+    generate.add_argument(
+        "--region",
+        default=config.region,
+        help="AWS region. Defaults to RUNBOOK_AWS_REGION, AWS_REGION, or AWS_DEFAULT_REGION.",
+    )
+    generate.add_argument(
+        "--cluster",
+        default=config.cluster,
+        help="EKS/Kubernetes cluster name.",
+    )
+    generate.add_argument(
+        "--namespace",
+        default=config.namespace,
+        help="Kubernetes namespace.",
+    )
+    generate.add_argument(
+        "--service",
+        default=config.service,
+        help="Primary service/workload name.",
+    )
+    generate.add_argument(
+        "--kube-context",
+        default=config.kube_context,
+        help="kubectl context to query.",
+    )
     generate.add_argument(
         "--output",
         "-o",
+        default=config.output,
         help="Path for the generated Markdown runbook. Prints to stdout when omitted.",
     )
     generate.add_argument(
         "--snapshot-output",
+        default=config.snapshot_output,
         help="Optional path for the normalized JSON snapshot used to render the runbook.",
     )
     generate.add_argument(

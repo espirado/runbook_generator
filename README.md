@@ -43,23 +43,32 @@ VM fleets, managed databases, queues, and MCP-backed discovery.
 
 ## Quick start
 
-Run the offline fixture path:
+Define the target using variables first. CLI flags can still override any of
+these values when needed.
 
 ```bash
-PYTHONPATH=src python3 -m runbook_generator.cli generate \
-  --source fixture \
-  --environment production \
-  --cluster payments-prod \
-  --namespace payments \
-  --service checkout-api \
-  --output runbooks/checkout-api.md \
-  --snapshot-output runbooks/checkout-api.snapshot.json
+export RUNBOOK_SOURCE=eks
+export RUNBOOK_ENVIRONMENT=replace-me-environment
+export RUNBOOK_AWS_ACCOUNT=replace-me-aws-account-id
+export RUNBOOK_AWS_REGION=replace-me-aws-region
+export RUNBOOK_EKS_CLUSTER=replace-me-eks-cluster-name
+export RUNBOOK_K8S_NAMESPACE=replace-me-kubernetes-namespace
+export RUNBOOK_SERVICE=replace-me-service-or-workload-name
+export RUNBOOK_KUBE_CONTEXT=replace-me-kubectl-context
+export RUNBOOK_OUTPUT=runbooks/replace-me-service-or-workload-name.md
+export RUNBOOK_SNAPSHOT_OUTPUT=runbooks/replace-me-service-or-workload-name.snapshot.json
 ```
 
-Print to stdout instead:
+Then generate from the configured target:
 
 ```bash
-PYTHONPATH=src python3 -m runbook_generator.cli generate --source fixture
+PYTHONPATH=src python3 -m runbook_generator.cli generate
+```
+
+For local demos without live access, set only the source:
+
+```bash
+RUNBOOK_SOURCE=fixture PYTHONPATH=src python3 -m runbook_generator.cli generate
 ```
 
 ## AWS/EKS live discovery
@@ -81,23 +90,23 @@ kubectl config current-context
 kubectl get deployments --all-namespaces
 ```
 
-Generate a runbook from AWS and EKS:
+Generate a runbook from AWS and EKS using the exported variables:
 
 ```bash
-PYTHONPATH=src python3 -m runbook_generator.cli generate \
-  --source eks \
-  --environment production \
-  --region us-east-1 \
-  --cluster your-eks-cluster \
-  --namespace your-namespace \
-  --service your-deployment \
-  --kube-context your-kube-context \
-  --output runbooks/your-service.md \
-  --snapshot-output runbooks/your-service.snapshot.json
+PYTHONPATH=src python3 -m runbook_generator.cli generate
 ```
 
 Use `--source aws` for account/regional AWS resources without querying
 Kubernetes workloads.
+
+You can also load the example variable file:
+
+```bash
+cp .env.example .env
+# edit .env with live values
+set -a; . ./.env; set +a
+PYTHONPATH=src python3 -m runbook_generator.cli generate
+```
 
 ## Development
 
